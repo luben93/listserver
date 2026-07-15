@@ -1,0 +1,16 @@
+services:
+  listserver:
+    build: .
+    image: listserver:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - list-data:/data
+      - ./pages:/app/pages   # mount pages dir so you can add files without rebuilding
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+
+volumes:
+  list-data:

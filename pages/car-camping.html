@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car Camping — Packing List</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  :root {
+    --ink: #1a1a18; --paper: #f5f2eb; --muted: #8a8778; --rule: #d4cfc0;
+    --green: #3d6b4f; --green-light: #e8f0eb; --amber: #c47c2b; --red: #b84040; --bg: #ece9e0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; padding-bottom: 80px; }
+  header { background: var(--ink); color: var(--paper); padding: 20px 24px 16px; position: sticky; top: 0; z-index: 10; border-bottom: 3px solid var(--amber); }
+  header h1 { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); margin-bottom: 4px; }
+  header p { font-size: 12px; color: #a09d94; font-family: 'IBM Plex Mono', monospace; }
+  .progress-bar { margin-top: 12px; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width 0.3s ease; }
+  .progress-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #a09d94; margin-top: 5px; }
+  .controls { display: flex; gap: 8px; padding: 14px 16px; background: var(--paper); border-bottom: 1px solid var(--rule); flex-wrap: wrap; align-items: center; }
+  .filter-btn { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: none; border: 1px solid var(--rule); color: var(--muted); padding: 5px 10px; border-radius: 2px; cursor: pointer; transition: all 0.15s; }
+  .filter-btn.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .filter-btn:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+  .home-btn { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: none; border: 1px solid var(--rule); color: var(--muted); padding: 5px 10px; border-radius: 2px; cursor: pointer; text-decoration: none; display: inline-block; }
+  .home-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .sections { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .section { background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; user-select: none; border-bottom: 1px solid var(--rule); }
+  .section-header:hover { background: #f0ede4; }
+  .section-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+  .section-title { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; flex: 1; }
+  .section-count { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+  .section-toggle { color: var(--muted); font-size: 12px; transition: transform 0.2s; }
+  .section.collapsed .section-toggle { transform: rotate(-90deg); }
+  .items { padding: 4px 0; }
+  .section.collapsed .items { display: none; }
+  .item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #ede9df; cursor: pointer; transition: background 0.1s; }
+  .item:last-child { border-bottom: none; }
+  .item:hover { background: #f0ede4; }
+  .item.checked { opacity: 0.45; }
+  .item-check { width: 16px; height: 16px; border: 1.5px solid var(--rule); border-radius: 2px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; background: white; transition: all 0.15s; }
+  .item.checked .item-check { background: var(--green); border-color: var(--green); color: white; }
+  .item-check::after { content: '✓'; font-size: 10px; display: none; }
+  .item.checked .item-check::after { display: block; }
+  .item-text { flex: 1; font-size: 14px; line-height: 1.4; }
+  .item.checked .item-text { text-decoration: line-through; }
+  .item-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 5px; border-radius: 2px; font-weight: 600; letter-spacing: 0.04em; flex-shrink: 0; margin-top: 2px; }
+  .tag-critical { background: #fde8e8; color: var(--red); }
+  .tag-note { background: #f5ede8; color: #824a3a; }
+  .add-item-form { display: none; padding: 10px 14px; background: var(--green-light); border-top: 1px solid var(--rule); gap: 8px; align-items: center; }
+  .add-item-form.visible { display: flex; }
+  .add-item-form input { flex: 1; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; border: 1px solid var(--rule); background: white; padding: 6px 10px; border-radius: 2px; outline: none; }
+  .add-item-form input:focus { border-color: var(--green); }
+  .add-item-form button { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; background: var(--green); color: white; border: none; padding: 6px 12px; border-radius: 2px; cursor: pointer; }
+  .section-add-btn { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); background: none; border: none; border-top: 1px solid var(--rule); padding: 8px 14px; text-align: left; cursor: pointer; letter-spacing: 0.04em; }
+  .section-add-btn:hover { color: var(--green); background: var(--green-light); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Car Camping — 7 days</h1>
+  <p>2 adults · 2 dogs · hiking · outdoor kitchen</p>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 0 packed</div>
+</header>
+<div class="controls">
+  <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" onclick="setFilter('critical',this)">⚠ Critical</button>
+  <button class="filter-btn" onclick="setFilter('unpacked',this)">Unpacked</button>
+  <a class="home-btn" href="/">← Lists</a>
+</div>
+<div class="sections" id="sectionsContainer"></div>
+<script>
+const PAGE_ID = 'car-camping';
+const initialData = [
+  { id:'shelter', title:'Shelter & Sleep', icon:'🏕️', collapsed:false, items:[
+    { id:'s1', text:'Rainfly / tarp + poles, guy lines, stakes', tag:'critical' },
+    { id:'s2', text:'Sleeping bags — rated for 5°C+', tag:'critical' },
+    { id:'s3', text:'Sleeping pads / foam layer for car bed', tag:null },
+    { id:'s4', text:'Pillows', tag:null },
+    { id:'s5', text:'Blanket (backup warmth, Fjäll nights get cold)', tag:null },
+    { id:'s6', text:'Window covers / blackout shades for car', tag:null },
+    { id:'s7', text:'Dog beds / mats (2×)', tag:null },
+  ]},
+  { id:'kitchen', title:'Outdoor Kitchen', icon:'🍳', collapsed:false, items:[
+    { id:'k1', text:'Gas stove (2-burner)', tag:'critical' },
+    { id:'k2', text:'Gas canisters — count meals, bring spare', tag:'critical' },
+    { id:'k3', text:'Lighter + matches', tag:null },
+    { id:'k4', text:'Cooking pot (2L)', tag:null },
+    { id:'k5', text:'Frying pan + lid', tag:null },
+    { id:'k6', text:'Chef\'s knife + cutting board', tag:null },
+    { id:'k7', text:'Cooking spoon + spatula + tongs', tag:null },
+    { id:'k8', text:'Plates, bowls, mugs (2× each)', tag:null },
+    { id:'k9', text:'Cutlery (2× sets)', tag:null },
+    { id:'k10', text:'Collapsible wash basin', tag:null },
+    { id:'k11', text:'Dish soap + sponge + dish towels (2×)', tag:null },
+    { id:'k12', text:'Cooler + ice packs', tag:null },
+    { id:'k13', text:'Dry food box / airtight containers', tag:null },
+    { id:'k14', text:'Water container (10L — for washing)', tag:null },
+    { id:'k15', text:'Pour over dripper + filters (pack double)', tag:null },
+    { id:'k16', text:'Hand grinder + coffee beans', tag:null },
+    { id:'k17', text:'Small kettle or dedicated boiling pot', tag:null },
+    { id:'k18', text:'Can opener + bottle opener', tag:null },
+    { id:'k19', text:'Aluminium foil + zip bags + trash bags', tag:null },
+    { id:'k20', text:'Paper towels', tag:null },
+  ]},
+  { id:'dogs', title:'Dogs', icon:'🐾', collapsed:false, items:[
+    { id:'d1', text:'Dog food — 7 days + buffer', tag:'critical' },
+    { id:'d2', text:'Dog medications (labelled, accessible)', tag:'critical' },
+    { id:'d3', text:'Flea/tick prevention applied before trip', tag:'critical' },
+    { id:'d4', text:'Food bowls + water bowls (2 dogs)', tag:null },
+    { id:'d5', text:'Food scoop + sealable bag/container', tag:null },
+    { id:'d6', text:'Leashes (2×) + backup', tag:null },
+    { id:'d7', text:'Harnesses / collars with ID tags', tag:null },
+    { id:'d8', text:'Long line for open terrain', tag:null },
+    { id:'d9', text:'Poop bags (large roll)', tag:null },
+    { id:'d10', text:'Dog towels (2× — old towels fine)', tag:null },
+    { id:'d11', text:'Collapsible travel water bowl', tag:null },
+    { id:'d12', text:'Dog first aid kit', tag:null },
+    { id:'d13', text:'Vet contact + vaccination records', tag:'critical' },
+    { id:'d14', text:'Car safety harness or crate', tag:null },
+    { id:'d15', text:'Chews / toys for downtime', tag:null },
+  ]},
+  { id:'hike', title:'Hiking', icon:'🥾', collapsed:false, items:[
+    { id:'h1', text:'Hiking boots / trail shoes (both)', tag:'critical' },
+    { id:'h2', text:'Hiking socks (3+ pairs each)', tag:null },
+    { id:'h3', text:'Day pack', tag:null },
+    { id:'h4', text:'Water bottles or hydration bladder', tag:null },
+    { id:'h5', text:'Trail snacks / energy bars', tag:null },
+    { id:'h6', text:'Offline maps downloaded (Gaia / AllTrails)', tag:null },
+    { id:'h7', text:'Rain jacket (2×)', tag:'critical' },
+    { id:'h8', text:'Trekking poles', tag:null },
+    { id:'h9', text:'Dog hiking harness', tag:null },
+  ]},
+  { id:'clothing', title:'Clothing', icon:'👕', collapsed:false, items:[
+    { id:'c1', text:'T-shirts (1 per day)', tag:null },
+    { id:'c2', text:'Merino base layer top (2×)', tag:null },
+    { id:'c3', text:'Merino base layer bottom', tag:null },
+    { id:'c4', text:'Fleece / mid-layer jacket (2×)', tag:null },
+    { id:'c5', text:'Waterproof outer jacket (2×)', tag:'critical' },
+    { id:'c6', text:'Hiking/outdoor trousers', tag:null },
+    { id:'c7', text:'Casual shorts + trousers', tag:null },
+    { id:'c8', text:'Underwear + socks (1 per day + 2 spare)', tag:null },
+    { id:'c9', text:'Warm hat + gloves (Fjäll evenings)', tag:'critical' },
+    { id:'c10', text:'Sun hat', tag:null },
+    { id:'c11', text:'Camp sandals', tag:null },
+    { id:'c12', text:'Swimwear', tag:null },
+  ]},
+  { id:'hygiene', title:'Hygiene', icon:'🧼', collapsed:true, items:[
+    { id:'hy1', text:'Toothbrushes + toothpaste', tag:null },
+    { id:'hy2', text:'Soap / body wash', tag:null },
+    { id:'hy3', text:'Shampoo + conditioner', tag:null },
+    { id:'hy4', text:'Deodorant (2×)', tag:null },
+    { id:'hy5', text:'Toilet paper', tag:'critical' },
+    { id:'hy6', text:'Wet wipes (between truckstop showers)', tag:null },
+    { id:'hy7', text:'Hand sanitizer', tag:null },
+    { id:'hy8', text:'Shower sandals for truckstops', tag:null },
+    { id:'hy9', text:'Quick-dry towels (2×)', tag:null },
+    { id:'hy10', text:'Sunscreen SPF 50+', tag:null },
+    { id:'hy11', text:'Bug repellent', tag:null },
+    { id:'hy12', text:'Personal medications', tag:'critical' },
+    { id:'hy13', text:'Lip balm with SPF', tag:null },
+    { id:'hy14', text:'Tweezers + nail clippers', tag:null },
+  ]},
+  { id:'camp', title:'Camp & Car', icon:'🚗', collapsed:true, items:[
+    { id:'ca1', text:'EV charge route planned', tag:'critical' },
+    { id:'ca2', text:'Charging cables + adapters', tag:'critical' },
+    { id:'ca3', text:'Folding chairs (2×)', tag:null },
+    { id:'ca4', text:'Folding table', tag:null },
+    { id:'ca5', text:'Headlamps (2×) + spare batteries', tag:null },
+    { id:'ca6', text:'Portable power bank (20 000+ mAh)', tag:null },
+    { id:'ca7', text:'Car USB adapter / 12V inverter', tag:null },
+    { id:'ca8', text:'First aid kit', tag:'critical' },
+    { id:'ca9', text:'Duct tape + paracord', tag:null },
+    { id:'ca10', text:'Insect coil / mosquito lantern', tag:null },
+    { id:'ca11', text:'Cargo net / car organizer', tag:null },
+    { id:'ca12', text:'Bluetooth speaker', tag:null },
+    { id:'ca13', text:'Offline maps downloaded on phone', tag:null },
+  ]},
+];
+
+let data = JSON.parse(JSON.stringify(initialData));
+let activeFilter = 'all';
+let saveTimeout = null;
+
+async function loadState() {
+  try {
+    const res = await fetch(`/api/state/${PAGE_ID}`);
+    if (res.ok) { const r = await res.json(); if (r && Array.isArray(r) && r.length) return r; }
+  } catch {}
+  return null;
+}
+
+function saveState(d) {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    try {
+      await fetch(`/api/state/${PAGE_ID}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d)
+      });
+    } catch {}
+  }, 400);
+}
+
+function itemMatchesFilter(item, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'critical') return item.tag === 'critical';
+  if (filter === 'unpacked') return !item.checked;
+  return true;
+}
+
+function setFilter(filter, btn) {
+  activeFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function toggleItem(sectionId, itemId) {
+  const item = data.find(s => s.id === sectionId).items.find(i => i.id === itemId);
+  item.checked = !item.checked;
+  saveState(data);
+  render();
+}
+
+function toggleSection(sectionId) {
+  const s = data.find(s => s.id === sectionId);
+  s.collapsed = !s.collapsed;
+  saveState(data);
+  render();
+}
+
+function addItem(sectionId, text) {
+  if (!text.trim()) return;
+  data.find(s => s.id === sectionId).items.push({ id: sectionId + '_' + Date.now(), text: text.trim(), tag: null, checked: false });
+  saveState(data);
+  render();
+}
+
+function tagLabel(tag) {
+  if (!tag) return '';
+  return `<span class="item-tag tag-${tag}">${tag === 'critical' ? '⚠ critical' : '💡 tip'}</span>`;
+}
+
+function render() {
+  const container = document.getElementById('sectionsContainer');
+  container.innerHTML = '';
+  const total = data.flatMap(s => s.items).length;
+  const checked = data.flatMap(s => s.items).filter(i => i.checked).length;
+  document.getElementById('progressFill').style.width = total ? (checked/total*100)+'%' : '0%';
+  document.getElementById('progressLabel').textContent = `${checked} / ${total} packed`;
+
+  data.forEach(section => {
+    const filtered = section.items.filter(i => itemMatchesFilter(i, activeFilter));
+    if (!filtered.length && activeFilter !== 'all') return;
+    const el = document.createElement('div');
+    el.className = 'section' + (section.collapsed ? ' collapsed' : '');
+    el.innerHTML = `
+      <div class="section-header" onclick="toggleSection('${section.id}')">
+        <span class="section-icon">${section.icon}</span>
+        <span class="section-title">${section.title}</span>
+        <span class="section-count">${section.items.filter(i=>i.checked).length}/${section.items.length}</span>
+        <span class="section-toggle">▾</span>
+      </div>
+      <div class="items">
+        ${filtered.map(item => `
+          <div class="item${item.checked?' checked':''}" onclick="toggleItem('${section.id}','${item.id}')">
+            <div class="item-check"></div>
+            <span class="item-text">${item.text}</span>
+            ${tagLabel(item.tag)}
+          </div>`).join('')}
+        <div class="add-item-form" id="form-${section.id}">
+          <input type="text" placeholder="Add item…" id="input-${section.id}"
+            onkeydown="if(event.key==='Enter'){addItem('${section.id}',this.value);this.value='';document.getElementById('form-${section.id}').classList.remove('visible');}">
+          <button onclick="addItem('${section.id}',document.getElementById('input-${section.id}').value);document.getElementById('input-${section.id}').value='';document.getElementById('form-${section.id}').classList.remove('visible');">Add</button>
+        </div>
+        <button class="section-add-btn" onclick="event.stopPropagation();document.getElementById('form-${section.id}').classList.toggle('visible');document.getElementById('input-${section.id}').focus();">+ Add item</button>
+      </div>`;
+    container.appendChild(el);
+  });
+}
+
+(async () => { const r = await loadState(); if (r) data = r; render(); })();
+</script>
+</body>
+</html>
