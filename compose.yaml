@@ -1,18 +1,23 @@
 services:
   listserver:
-    # Published by .github/workflows/build-publish.yml
+    # Pre-built image published by .github/workflows/build-publish.yml.
+    # Portainer deploys this file as-is (no build support). For local dev,
+    # compose.override.yaml adds `build: .` automatically.
     # Pin a version for production, e.g. LISTSERVER_TAG=1.2.3 docker compose up -d
-    image: ${LISTSERVER_IMAGE:-ghcr.io/OWNER/listserver}:${LISTSERVER_TAG:-latest}
-    build: .
+    image: ${LISTSERVER_IMAGE:-ghcr.io/luben93/listserver}:${LISTSERVER_TAG:-latest}
+    container_name: listserver
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # LAN-only service — firewall port 3000 and don't forward it to the internet.
+      - "${LISTSERVER_BIND:-3000}:3000"
     volumes:
       - list-data:/data
       - ./pages:/app/pages   # mount pages dir so you can add files without rebuilding
     environment:
       - PORT=3000
       - DATA_DIR=/data
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
       interval: 30s

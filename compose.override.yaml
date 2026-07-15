@@ -1,0 +1,6 @@
+# Local development override — auto-loaded by `docker compose` on your machine,
+# ignored by Portainer (which only reads compose.yaml).
+services:
+  listserver:
+    build: .
+    image: listserver:local
