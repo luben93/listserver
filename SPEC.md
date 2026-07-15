@@ -290,3 +290,13 @@ Delete any file from the index UI (red ✕) or via:
 ```
 DELETE /delete/:filename
 ```
+
+When the index UI deletes a page it also calls the orphan-cleanup variant of the
+KV wipe endpoint:
+```
+DELETE /api/kv/:slug?orphan=1
+```
+With `?orphan=1` the server removes the slug's stored data **only if no page
+(`.html`/`.md`/`.txt`) still uses that slug**; otherwise it's a no-op
+(`{ ok, skipped }`). Without the flag, `DELETE /api/kv/:slug` wipes the store
+unconditionally, as documented above.

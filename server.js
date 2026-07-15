@@ -94,7 +94,7 @@ app.get('/', (_req, res) => {
         <span class="card-arrow">→</span>
       </a>
       <button class="card-update" title="Upload a new version of ${f.name}" onclick="updateFile('${f.name}')">⟳</button>
-      <button class="card-del" title="Delete ${f.name}" onclick="del('${f.name}')">✕</button>
+      <button class="card-del" title="Delete ${f.name}" onclick="del('${f.name}', true)">✕</button>
     </div>`).join('');
 
   const assetRows = assets.map(f => `
@@ -236,9 +236,15 @@ app.get('/', (_req, res) => {
     } catch { msg.className='msg err'; msg.textContent='Network error.'; btn.disabled=false; }
   });
 
-  async function del(name) {
-    if (!confirm('Delete ' + name + '?')) return;
+  async function del(name, isPage) {
+    if (!confirm('Delete ' + name + (isPage ? ' and its saved data?' : '?'))) return;
     const res = await fetch('/delete/' + encodeURIComponent(name), { method:'DELETE' });
+    if (res.ok && isPage) {
+      // Clean up the page's KV/state store — the server only removes it if
+      // no other page still uses the slug (?orphan=1 safeguard).
+      const slug = name.replace(/\\.[^.]+$/, '');
+      await fetch('/api/kv/' + encodeURIComponent(slug) + '?orphan=1', { method:'DELETE' }).catch(() => {});
+    }
     if (res.ok) window.location.reload();
   }
 
@@ -363,7 +369,18 @@ app.delete('/api/kv/:slug/:key', (req, res) => {
 app.delete('/api/kv/:slug', (req, res) => {
   const { slug } = req.params;
   if (!safeSlug(slug)) return res.status(400).json({ error: 'Invalid slug' });
-  try { kvWrite(slug, {}); res.json({ ok: true }); }
+  try {
+    // ?orphan=1 → cleanup mode (used by the index after deleting a page):
+    // remove the store file only if no page still uses this slug.
+    if ('orphan' in req.query) {
+      const inUse = listFiles().some(f => f.slug === slug && PAGE_EXT.has(f.ext));
+      if (inUse) return res.json({ ok: true, skipped: 'slug still in use' });
+      if (existsSync(kvFile(slug))) unlinkSync(kvFile(slug));
+      return res.json({ ok: true, removed: true });
+    }
+    kvWrite(slug, {});
+    res.json({ ok: true });
+  }
   catch { res.status(500).json({ error: 'Wipe failed' }); }
 });
 
