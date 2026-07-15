@@ -1,7 +1,9 @@
 services:
   listserver:
+    # Published by .github/workflows/build-publish.yml
+    # Pin a version for production, e.g. LISTSERVER_TAG=1.2.3 docker compose up -d
+    image: ${LISTSERVER_IMAGE:-ghcr.io/OWNER/listserver}:${LISTSERVER_TAG:-latest}
     build: .
-    image: listserver:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -11,6 +13,14 @@ services:
     environment:
       - PORT=3000
       - DATA_DIR=/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   list-data:
+    # Fixed name: the volume is NOT prefixed with the compose project name,
+    # so data survives renaming the app/service/folder or redeploying elsewhere.
+    name: listserver-data
