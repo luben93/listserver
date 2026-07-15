@@ -86,19 +86,24 @@ app.get('/', (_req, res) => {
   const assets = files.filter(f => !PAGE_EXT.has(f.ext));
 
   const pageCards = pages.map(f => `
-    <a class="card" href="/p/${f.name}">
-      <span class="card-icon">${f.ext === '.html' ? '📄' : f.ext === '.md' ? '📝' : '📃'}</span>
-      <span class="card-name">${f.name}</span>
-      <span class="card-meta">${(f.size/1024).toFixed(1)} KB</span>
-      <span class="card-arrow">→</span>
-    </a>`).join('');
+    <div class="card">
+      <a class="card-main" href="/p/${f.name}">
+        <span class="card-icon">${f.ext === '.html' ? '📄' : f.ext === '.md' ? '📝' : '📃'}</span>
+        <span class="card-name">${f.name}</span>
+        <span class="card-meta">${(f.size/1024).toFixed(1)} KB</span>
+        <span class="card-arrow">→</span>
+      </a>
+      <button class="card-update" title="Upload a new version of ${f.name}" onclick="updateFile('${f.name}')">⟳</button>
+      <button class="card-del" title="Delete ${f.name}" onclick="del('${f.name}')">✕</button>
+    </div>`).join('');
 
   const assetRows = assets.map(f => `
     <div class="asset-row">
       <span class="asset-name">${f.name}</span>
       <span class="asset-meta">${(f.size/1024).toFixed(1)} KB</span>
       <a class="asset-link" href="/p/${f.name}" target="_blank">↗</a>
-      <button class="asset-del" onclick="del('${f.name}')">✕</button>
+      <button class="card-update" title="Upload a new version of ${f.name}" onclick="updateFile('${f.name}')">⟳</button>
+      <button class="card-del" title="Delete ${f.name}" onclick="del('${f.name}')">✕</button>
     </div>`).join('');
 
   res.send(`<!DOCTYPE html>
@@ -119,12 +124,17 @@ app.get('/', (_req, res) => {
   h2 { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; margin-top:28px; }
   h2:first-child { margin-top:0; }
   .cards { display:flex; flex-direction:column; gap:8px; }
-  .card { display:flex; align-items:center; gap:10px; background:var(--paper); border:1px solid var(--rule); border-radius:3px; padding:13px 14px; text-decoration:none; color:var(--ink); transition:border-color 0.15s,background 0.15s; }
+  .card { display:flex; align-items:center; gap:2px; background:var(--paper); border:1px solid var(--rule); border-radius:3px; padding:0 8px 0 0; transition:border-color 0.15s,background 0.15s; }
   .card:hover { border-color:var(--amber); background:#f0ede4; }
+  .card-main { display:flex; align-items:center; gap:10px; flex:1; min-width:0; padding:13px 14px; text-decoration:none; color:var(--ink); }
   .card-icon { font-size:14px; }
-  .card-name { font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; flex:1; }
+  .card-name { font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; }
   .card-meta { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); }
   .card-arrow { color:var(--amber); font-size:16px; }
+  .card-update { background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; padding:4px 6px; }
+  .card-update:hover { color:var(--amber); }
+  .card-del { background:none; border:none; color:var(--red); cursor:pointer; font-size:14px; padding:4px 6px; }
+  .card-del:hover { color:#8f2626; }
   .empty { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); padding:16px; background:var(--paper); border:1px solid var(--rule); border-radius:3px; }
   .asset-list { background:var(--paper); border:1px solid var(--rule); border-radius:3px; overflow:hidden; }
   .asset-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--rule); font-size:13px; }
@@ -132,8 +142,6 @@ app.get('/', (_req, res) => {
   .asset-name { font-family:'IBM Plex Mono',monospace; font-size:12px; flex:1; }
   .asset-meta { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); }
   .asset-link { color:var(--amber); text-decoration:none; font-size:14px; }
-  .asset-del  { background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; padding:2px 4px; }
-  .asset-del:hover { color:var(--red); }
   .upload-box { background:var(--paper); border:1px solid var(--rule); border-radius:3px; padding:20px; }
   .drop-zone { border:2px dashed var(--rule); border-radius:3px; padding:28px 16px; text-align:center; cursor:pointer; transition:border-color 0.15s,background 0.15s; margin-bottom:10px; }
   .drop-zone.dragover { border-color:var(--amber); background:var(--green-light); }
@@ -233,6 +241,28 @@ app.get('/', (_req, res) => {
     const res = await fetch('/delete/' + encodeURIComponent(name), { method:'DELETE' });
     if (res.ok) window.location.reload();
   }
+
+  // Update-in-place: pick a file and upload it under the existing name,
+  // so the URL/slug stays stable no matter what the new file is called.
+  const updInput = document.createElement('input');
+  updInput.type = 'file';
+  let updateTarget = null;
+
+  function updateFile(name) { updateTarget = name; updInput.click(); }
+
+  updInput.addEventListener('change', async () => {
+    const f = updInput.files[0];
+    if (!f || !updateTarget) return;
+    const fd = new FormData(); fd.append('file', f);
+    msg.className = 'msg'; msg.textContent = 'Updating ' + updateTarget + '…';
+    try {
+      const res = await fetch('/upload?name=' + encodeURIComponent(updateTarget), { method:'POST', body:fd });
+      const data = await res.json();
+      if (res.ok) { msg.className='msg ok'; msg.textContent='Updated!'; setTimeout(() => window.location.reload(), 500); }
+      else { msg.className='msg err'; msg.textContent = data.error || 'Update failed.'; }
+    } catch { msg.className='msg err'; msg.textContent='Network error.'; }
+    updInput.value = '';
+  });
 
   function copySpec() {
     const url = window.location.origin + '/spec';
@@ -414,12 +444,21 @@ app.post('/upload', (req, res) => {
 
       if (!filename || !fileBuffer) return res.status(400).json({ error: 'No file' });
 
-      const ext = extname(filename).toLowerCase();
-      // No whitelist — any extension accepted, served with best-guess MIME type.
-
-      const base = basename(filename, ext).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '');
-      if (!base) return res.status(400).json({ error: 'Invalid filename' });
-      const name = base + ext;
+      // ?name=<existing.ext> replaces that exact file regardless of what the
+      // uploaded file is called — used by the ⟳ update button on the index.
+      const target = typeof req.query.name === 'string' ? req.query.name : '';
+      let name, ext;
+      if (target) {
+        if (!safeSlug(target) || !extname(target)) return res.status(400).json({ error: 'Invalid target name' });
+        name = target;
+        ext = extname(target).toLowerCase();
+      } else {
+        ext = extname(filename).toLowerCase();
+        // No whitelist — any extension accepted, served with best-guess MIME type.
+        const base = basename(filename, ext).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '');
+        if (!base) return res.status(400).json({ error: 'Invalid filename' });
+        name = base + ext;
+      }
 
       writeFileSync(join(PAGES_DIR, name), fileBuffer);
       res.json({ ok: true, name, isPage: PAGE_EXT.has(ext), size: fileBuffer.length });

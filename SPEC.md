@@ -278,8 +278,15 @@ Any of these file types can be dropped on the index upload zone or POSTed to `/u
 - Everything else → shown as assets (linked, deletable)
 - Files are served at `/p/<filename>` with correct Content-Type
 - Filename is slugified on upload (lowercase, special chars → `-`)
+- Re-uploading the same filename overwrites it (update in place)
 
-Delete any file from the index UI or via:
+Replace an existing file regardless of the uploaded file's own name (used by the
+⟳ button on the index — keeps the `/p/<filename>` URL stable):
+```
+POST /upload?name=<existing-filename.ext>
+```
+
+Delete any file from the index UI (red ✕) or via:
 ```
 DELETE /delete/:filename
 ```

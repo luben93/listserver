@@ -40,7 +40,8 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            # every push to main -> edge + sha-<short>
+            # every push to main -> latest + edge + sha-<short>
+            type=raw,value=latest,enable={{is_default_branch}}
             type=edge,branch=main
             type=sha,prefix=sha-
 
